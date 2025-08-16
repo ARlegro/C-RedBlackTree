@@ -22,46 +22,176 @@ void delete_rbtree(rbtree *t) {
   free(t);
 }
 
+/* 시작 
+1. 타고 내려간다 : NULL이 아니라 nil 노드인거를 확인 
+2. 삽입할 자리 만들면 node만들고 대입  
+*/
+void insert_node(rbtree *t, node_t *new_node){
+  node_t *cur = t->root;
+  node_t *parent = t->nil;
+  while (1) {
+
+    // nil을 만났을 경우 
+    if (cur == t->nil) {
+      
+      // 왼쪽인 경우 
+      if (parent->key > new_node->key) {
+        parent->left = cur;
+      } else {
+        parent->right = cur;
+      }
+      
+      new_node->parent = parent;
+      cur = new_node;
+      break;
+    }
+    
+    // 아직 nil 만나기 전 
+    if (cur->key < new_node->key) {
+      cur = cur->right;
+    } else {
+      cur = cur->left;
+    }
+    
+    parent = cur;
+  }
+}
+
+void left_rotate(rbtree *t, node_t *old_sub_root){
+  node_t *new_sub_root = old_sub_root->right;
+  
+  // 새로운 subRoot의 자식들 넘겨주기 
+  old_sub_root->right = new_sub_root->left;
+  if (new_sub_root->left != t->nil){
+    new_sub_root->left->parent = old_sub_root;
+  }
+
+  // subRoot의 부모를 연결시키기 
+  update_parent_link(t, old_sub_root, new_rbtree);
+  
+  // 자손관계 역전 
+  old_sub_root->parent = new_sub_root;
+  new_sub_root->left = old_sub_root;
+}
+
+void update_parent_link(rbtree *t, node_t *old_sub_root, node_t *new_sub_root){
+  node_t* p = old_sub_root->parent;
+  if (p == t->nil){
+    t->root = new_sub_root;
+  } else if (p->right == old_sub_root){
+    p->right = new_sub_root;
+  } else {
+    p->left = new_sub_root;
+  }
+  new_sub_root->parent = p;  
+}
+
+void right_rotate(rbtree *t, node_t *old_sub_root){
+  node_t *new_sub_root = old_sub_root->left;
+  
+  // 새로운 subRoot의 자식들 넘겨주기 
+  old_sub_root->left = new_sub_root->right;
+  if (new_sub_root->right != t->nil){
+    new_sub_root->right->parent = old_sub_root;
+  }
+
+  // subRoot의 부모를 연결시키기 
+  update_parent_link(t, old_sub_root, new_rbtree);
+
+  // 자손관계 역전 
+  old_sub_root->parent = new_sub_root;
+  new_sub_root->right = old_sub_root;
+}
+
 node_t *rbtree_insert(rbtree *t, const key_t key) {
   // TODO: implement insert
-
-  node_t *newNode = (node_t *)malloc(sizeof(node_t));
-  newNode->color = RBTREE_RED;
-  newNode->key = key;
-  newNode->parent = NULL;
-  newNode->left = NULL;
-  newNode->right = NULL;
+  node_t *new_node = (node_t *)malloc(sizeof(node_t));
+  new_node->color = RBTREE_RED;
+  new_node->key = key;
+  new_node->parent = t->nil;
+  new_node->left = t->nil;
+  new_node->right = t->nil;
 
   // 처음인 경우 
   if (t->root == t->nil) {
-    newNode->color = RBTREE_BLACK;
-    newNode->parent = newNode;
-    newNode->left = (node_t *) malloc(sizeof(node_t));
-    newNode->right = (node_t *) malloc(sizeof(node_t));
-
-    t->root = newNode;
-  
-    return t;
+    new_node->color = RBTREE_BLACK;
+    t->root = new_node;
+    return new_node;
   }
 
+  insert_node(t, new_node);
 
-  /* 시작 
-  1. 타고 내려간다 : NULL이 아니라 nil 노드인거를 확인 
-  2. 삽입할 자리 만들면 node만들고 대입  
-  */
-  node_t *cur = t->root;
-  while (1)
+  node_t *cur = new_node;
+
+  // 보조 
+  while (cur->parent->color == RBTREE_RED)
   {
     /* code */
-    // 중복이면 게임 끝
-    if (cur->key == key) {
-      return t;
+    node_t *g = cur->parent->parent;
+    // case 1 : 부모 삼촌이 Red인 경우 
+    if (g->left->color == RBTREE_RED && g->right->color == RBTREE_RED){
+      g->left->color = RBTREE_BLACK;
+      g->right->color = RBTREE_BLACK;
+      g->color = RBTREE_RED;
+      cur = g;
+      continue;
     }
 
-    // nil을 만났을 경우 
-    if (!cur->key) {
-      newNode->parent = cur->parent;
-      cur = newNode;
+    // 부모만 Red일 경우(삼촌은 Black)
+    node_t *p = cur->parent;
+    if (p == g->left) {
+      
+      // 지그재그인 경우 - 펴주기 
+      if (p->right == cur) {
+        left_rotate(t, p);
+      }
+
+      // Case 3. 
+      node_t *old_sub_root = (node_t *)cur->parent;
+      
+      cur->color = RBTREE_BLACK;
+      old_sub_root->color = RBTREE_RED;
+
+      right_rotate(t, old_sub_root);
+
+
+    } else if (p == g->right){
+      // 지그재그인 경우 
+      if (p->left == cur) {
+        right_rotate(t, p);
+      }
+
+      // Case 3
+      node_t *old_sub_root = (node_t *)cur->parent;
+
+      cur->color = RBTREE_BLACK;
+      cur->parent->color = RBTREE_RED;
+
+      left_rotate(t, old_sub_root);
+    }
+  }
+
+  // 마지막
+  if (t->root->color == RBTREE_RED){
+    t->root->color = RBTREE_BLACK;
+  }
+
+  return new_node;
+}
+
+node_t *rbtree_find(const rbtree *t, const key_t key) {
+  // TODO: implement find
+
+  // 아무것도 없는 경우 
+  if (t->root == t->nil) {
+    return NULL;
+  }
+
+  node_t *cur = t->root;
+  while (cur->key != key){
+    // 없으면 null 
+    if (cur == t->nil) {
+      cur = NULL;
       break;
     }
     
@@ -71,128 +201,8 @@ node_t *rbtree_insert(rbtree *t, const key_t key) {
       cur = cur->left;
     }
   }
-  
-  // 보조 
-  while (cur->parent->color == RBTREE_RED)
-  {
-      /* code */
-    node_t *g = cur->parent->parent;
-    // 부모 삼촌이 Red인 경우 
-    if (g->left == RBTREE_RED && g->right == RBTREE_BLACK){
-      g->left->color = RBTREE_BLACK;
-      g->right->color = RBTREE_BLACK;
-      g->color = RBTREE_RED;
-      cur = g;
-      continue;
-    }
 
-    // 부모만 Red일 경우(삼촌은 Black)
-    // 부모가 조부모의 왼쪽일 경우
-    node_t *p = cur->parent;
-    if (p == g->left) {
-      
-      // 지그재그인 경우 - 펴주기 
-      if (p->right == cur) {
-        g->left = cur;
-        cur->parent = g;
-        p->right = cur->left;
-        if (cur->left != t->nil) {
-          cur->left->parent = p;
-        }
-        
-        cur->left = p;
-        p->parent = cur;
-      }
-
-      // Case 3. 
-
-      //// 1. 색깔 바꾸고 
-      cur->color = RBTREE_BLACK;
-      cur->parent->color = RBTREE_RED;
-      
-      //// 2. 우회전 
-      node_t *originSubRoot = (node_t *)cur->parent;
-
-      // 현재 기준 조부모와의 합의 
-      if (originSubRoot->parent == t->nil){ // 루트인 경우 
-        t->root = cur;
-      } else if (originSubRoot->parent->left = originSubRoot){
-        originSubRoot->parent->left = cur;
-      } else {
-        originSubRoot->parent->right = cur;
-      }
-      cur->parent = originSubRoot->parent;
-
-      // cur의 오른쪽을 넘겨주기 
-      originSubRoot->left = cur->right;
-      if (cur->right != t->nil){  // nil일 경우 조심 
-        cur->right->parent = originSubRoot;
-      }
-
-      cur->right = originSubRoot;
-      originSubRoot->parent = cur;
-
-    } else if (p == g->right){
-      // 지그재그인 경우 
-      if (p->left == cur) {
-        cur->parent = p->parent;
-        p->parent->right = cur;
-        
-        p->left = cur->right;
-        if (cur->right != t->nil) {
-          cur->right->parent = p;
-        }
-        
-        cur->right = p;
-        p->parent = cur;  
-      }
-
-      // Case 3 - cur이 중간에 와있는 상황 
-      // 회전
-      node_t *originSubRoot = cur->parent;
-      cur->color = RBTREE_BLACK;
-      originSubRoot->color = RBTREE_RED;
-
-      originSubRoot->right = cur->left;
-      if (cur->left != t->nil) {
-        cur->left->parent = originSubRoot;
-      }
-
-      // subTree Root의 부모와 cur 연결하기(cur이 subTree Root될 것)
-      if (originSubRoot->parent == t->nil){ // root인 경우 
-        t->root = cur;
-      } else if (originSubRoot->parent->left == originSubRoot){
-        originSubRoot->parent->left = cur;
-      } else {
-        originSubRoot->parent->right= cur;
-      }
-      cur->parent = originSubRoot->parent;
-      
-      cur->left = originSubRoot;
-      originSubRoot->parent = cur;
-    }
-  }
-
-  // 마지막 : rott 
-  if (t->root == RBTREE_RED){
-    t->root = RBTREE_BLACK;
-  }
-
-  return t->root;
-}
-
-// 회전은 언제나 조부모기준 
-void rotate_right(rbtree *t, node_t *grandParent){
-
-}
-
-void left_right(rbtree *t, node_t *grandParent){
-  
-}
-
-node_t *rbtree_find(const rbtree *t, const key_t key) {
-  // TODO: implement find
-  return t->root;
+  return cur;
 }
 
 node_t *rbtree_min(const rbtree *t) {
