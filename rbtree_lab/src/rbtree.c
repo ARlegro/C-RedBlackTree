@@ -277,12 +277,6 @@ void rbtree_transplant(rbtree *t, node_t *origin_child, node_t *new_child){
   }
 }
 
-#include <stdio.h>
-
-
-const char *color_str[] = { "RED", "BLACK" };
-//printf("색깔 = %s\n", color_str[c]);   
-
 void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
   db_node->parent = parent; // nil 노드일 경우 대비 
   node_t *p = db_node->parent;
@@ -290,10 +284,6 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
 
   while (1)
   {
-
-    printf("========================앞쪽=========================\n");
-    printf("db_node.key = %d\n", db_node->key);     
-    printf("parent.key = %d\n", db_node->parent->key);     
     // doubly_black 노드가 Root인 경우 
     if (db_node->parent == t->nil){
       //t->root = db_node;
@@ -308,18 +298,13 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
 
     // db_node가 왼쪽일 경우 
     if (p->left == db_node){
-      // brother 갱신 
       brother = p->right;
-      //printf("시작 => brother의 색 = ")
 
       // Case 0. 형제가 Red인 경우 : 색변화 + left_rotate 후 brotehr 초기화 
       if (brother->color == RBTREE_RED){
         p->color = RBTREE_RED;
         brother->color = RBTREE_BLACK;
-        
-        //brother = brother->left; // 새로운 형제로 
         left_rotate(t, p);
-        printf("문제아 1");
         continue;
       }
 
@@ -347,25 +332,17 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
 
         // 이제 doubly_black은 부모가 됨 
         db_node = p;
-        printf("문제아 2");
         continue;
       } 
       
       // Case 3. brotehr의 왼쪽 자식 Red, 오른쪽 자식 Black
       if (brother->left->color == RBTREE_RED && brother->right->color == RBTREE_BLACK){
-        printf("brother.key = %d\n", brother->key);     
         // Case 1 을 유도하도록만 
         brother->color = RBTREE_RED;
         brother->left->color = RBTREE_BLACK;
         right_rotate(t, brother);
-        printf("문제아 3");
-        printf("문제아 3 : new Brother 색 = %s\n", color_str[p->right->color]);
-        printf("문제아 3 : new Brother의 Key = %d\n", p->right->key);
-        printf("문제아 3 : old brother 색 = %s\n", color_str[brother->color]);
-        printf("문제아 3 : old brother의 Key = %d\n", p->right->right->key);
         continue; 
       }
-      printf("엄청난 문제아 1");
     } 
 
     // db_node가 오른쪽일 경우 
@@ -379,7 +356,6 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
 
         brother = brother->right;
         right_rotate(t, p);
-        printf("문제아 4");
         continue;
       }
 
@@ -405,7 +381,6 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
         }
 
         db_node = p;
-        printf("문제아 5");
         continue;
       }
 
@@ -414,17 +389,10 @@ void rbtree_fixup_doubly_black(rbtree *t, node_t *db_node, node_t *parent){
         brother->color = RBTREE_RED;
         brother->right->color = RBTREE_BLACK;
         left_rotate(t, brother);
-        printf("문제아 6");
         continue;
       }
-      printf("엄청난 문제아 2");
     }
-
-    printf("========================뒤쪽=========================");
-    printf("db_node.key = %d\n", db_node->key); 
   }
-  
-  // nil 초기화 (색바꾼것도 위에서 분기 처리없애고 그냥 여기서 처리)
   t->nil->parent = t->nil;
   t->nil->color = RBTREE_BLACK;
 }
@@ -481,7 +449,7 @@ int rbtree_erase(rbtree *t, node_t *p) {
 
   /**
    * 위반 여부 확인
-   * 1. 레드일 경우 위반 X
+   * 1. 레드일 경우 위반 없음 
    * 2. 블랙일 경우 위반 => E.B 추가 
    */
   if (original_coler == RBTREE_RED){
@@ -529,5 +497,3 @@ int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
   
   return 1;
 }
-
-//{10, 5, 8, 34, 67, 23, 156, 24, 2, 12, 24, 36, 990, 25};
